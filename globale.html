@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+    <style>
+        html, body {
+            height: 100%;
+        }
+        .hidden{
+            display: none;
+        }
+        #sidebar{
+            overflow: auto;
+            -ms-flex: 0 0 175px;
+            flex: 0 0 175px;
+        }
+    </style>
+    <title>Mappa globale</title>
+</head>
+<body>
+    <nav class="navbar navbar-light bg-light">
+        <form class="form-inline">
+            <button id="blterr" class="btn btn-outline-info" type="button">Lista territori</button>
+        </form>
+        <form class="form-inline">
+            <button class="btn btn-outline-success" type="button" data-toggle="modal" data-target="#SearchModal"><i class="fa fa-search"></i></button>
+        </form>
+        <form class="form-inline">
+            <button class="btn btn-outline-info" type="button" data-toggle="modal" data-target="#HelpModal"><i class="fa fa-question-circle"></i></button>
+        </form>
+        <form id="rmostrat" class="form-inline float-right">
+            <button class="btn btn-success" onclick="showAll('0');" ondblclick="showAll('1');">Mostra tutti</button>
+        </form>
+    </nav>
+    <!–– height deve essere impostato sul div della mappa e tutti i suoi parent altrimenti non si vede senza dimensione fissa ––>
+    <div class="container-fluid" style="height: 100%;">
+        <div class="row" style="height: 90%;">
+            <div id="map" class="col" style="height: 100%;"></div>
+            <div id="sidebar" class="col hidden" style="height: 100%;"></div>
+        </div>
+    </div>
+    <div class="modal fade" id="SearchModal" tabindex="-1" role="dialog" aria-labelledby="SearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="SearchModalLabel">Ricerche</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <input id="address" type="text" class="form-control" placeholder="Inserisci indirizzo" aria-label="Inserisci indirizzo" aria-describedby="geocode">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-success" type="button" id="geocode"  onclick="codeAddress();">Punta a</button>
+                        </div>
+                    </div>
+                    <div class="input-group mt-2">
+                        <input id="snomet" type="text" class="form-control" placeholder="Inserisci Territorio" aria-label="Inserisci Territorio" aria-describedby="bsterritorio" list="lnomiterritori">
+                        <datalist id="lnomiterritori">
+                        </datalist>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-success" type="button" id="bsterritorio">Seleziona</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="HelpModal" tabindex="-1" role="dialog" aria-labelledby="HelpModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="HelpModalLabel">Aiuto</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Il bottone "Lista territori" fa apparire la lista dei territori a destra della mappa.</p>
+                    <p>Nella lista territori vengono visualizzati solo i territori nella parte di mappa visibile in quel momento e si aggiorna ogni minimo spostamento o azione.<br/>
+                    Se si passa con il puntatore sopra un territorio nella lista viene evidenziato sulla mappa; se si clicca tale territorio viene selezionato, la mappa centrata e se non visibile viene visualizzato; se si fa doppio click vengono nascosti tutti i territori tranne quello e viene effettuato lo zoom centrato su di esso.</p>
+                    <p>Il pulsante "Mostra tutti" al click mostra tutti i territori (se erano stati nascosti) e al doppio click effettua anche la diminuzione dello zoom e centra in modo da visualizzare tutti i territori.</p>
+                    <p>Il pulsante con la lente di ingrandimento apre una scheda contenente le funzioni di cerca indirizzo e cerca territorio.</p>
+                    <p>Se si clicca con il tasto sinistro su un territorio nella mappa viene evidenziato e si visualizza il nome, se si clicca col destro vengono nascosti tutti i territori tranne quello e viene effettuato lo zoom centrato su di esso; e quando si riclicca col destro su esso mostra tutti i territori, effettua la diminuzione dello zoom e centra in modo da visualizzare tutti i territori.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="geoxml3.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha384-vk5WoKIaW/vJyUAd9n/wmopsmNhiy+L2Z+SBxGYnUkunIxVxAv/UtMOhba/xskxh" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script>
+    var map = null;
+    var geoxmlt = null;
+    var geoXmlDoc = null;
+    var singolo = null;
+    var centramypos = '0';
+
+    //alert("Test: Width "+$(window).width()+" Height "+$(window).height());
+
+    // mostra/nascondi lista territori
+    $('#blterr').on('click', function(){
+        $('#sidebar').toggleClass('hidden');
+    });
+    
+    // seleziona territorio dal cerca
+    $('#bsterritorio').click(function(){
+        kmlShowPlacemark($("#lnomiterritori option[value='" + $('#snomet').val() + "']").attr('data-id'));
+    });
+
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 11,
+            center:  {lat: 41.876, lng: -87.624},
+            mapTypeId: 'hybrid',
+            styles: [
+                {
+                    "featureType": "administrative",
+                    "elementType": "geometry",
+                    "stylers": [
+                        {
+                            "visibility": "off"
+                        }
+                    ]
+                },
+                {
+                    "featureType": "poi",
+                    "stylers": [
+                        {
+                            "visibility": "off"
+                        }
+                    ]
+                },
+                {
+                    "featureType": "road",
+                    "elementType": "geometry",
+                    "stylers": [
+                        {
+                            "color": "#ffffff"
+                        },
+                        {
+                            "visibility": "simplified"
+                        }
+                    ]
+                },
+                {
+                    "featureType": "road",
+                    "elementType": "labels",
+                    "stylers": [
+                        {
+                            "color": "#000000"
+                        },
+                        {
+                            "visibility": "simplified"
+                        }
+                    ]
+                },
+                {
+                    "featureType": "road",
+                    "elementType": "labels.icon",
+                    "stylers": [
+                        {
+                            "visibility": "off"
+                        }
+                    ]
+                },
+                {
+                    "featureType": "transit",
+                    "stylers": [
+                        {
+                            "visibility": "off"
+                        }
+                    ]
+                }
+            ],
+
+            mapTypeControlOptions: {
+                mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain','TERRITORI']
+            },
+            streetViewControlOptions: {
+                position: google.maps.ControlPosition.LEFT_BOTTOM
+            },
+
+        });
+
+
+        // MARKER SALA DEL REGNO E POSIZIONI TESTIMONIANZA PUBBLICA
+        var contentString = '<div>'+
+            '<h3>SALA DEL REGNO</h3>'+
+            '<p><b>Giovedì Ore 20:00<br>' +
+            'Domenica Ore 09:45</b></p>' +
+            '</div>';
+        var infowindow = new google.maps.InfoWindow({
+            content: contentString,
+            maxWidth: 200
+        });
+        var SALADELREGNO = new google.maps.Marker({
+            map: map,
+            animation: google.maps.Animation.DROP,
+            position: {lat: 45.810202, lng: 10.061752},
+            title:"SALA DEL REGNO",
+            icon: "img/Map-Marker-Marker-Outside-Azure-icon-48.png",
+        });
+        SALADELREGNO.addListener('click', function() {
+            infowindow.open(map, SALADELREGNO);
+        });
+
+        var icontestpub = "img/Map-Marker-Marker-Outside-Chartreuse-icon-32.png";
+        //LOVERE
+        var contentString1 = '<div>'+
+            '<h3>MERCATO DI LOVERE</h3>'+
+            '<p><b>Sabato Mattina Ore 09:00</b></p>' +
+            '</div>';
+        var infowindow1 = new google.maps.InfoWindow({
+            content: contentString1,
+            maxWidth: 200
+        });
+        var TESTPUBB1 = new google.maps.Marker({
+            map: map,
+            animation: google.maps.Animation.DROP,
+            position: {lat: 45.823272, lng:10.084962},
+            title:"MERCATO DI LOVERE",
+            icon: icontestpub,
+
+        });
+        TESTPUBB1.addListener('click', function() {
+            infowindow1.open(map, TESTPUBB1);
+        });
+
+        //PISOGNE
+        var contentString2 = '<div>'+
+            '<h3>MERCATO DI PISOGNE</h3>'+
+            '<p><b>Venerdi Mattina Ore 09:00</b></p>'+
+            '</div>';
+        var infowindow2 = new google.maps.InfoWindow({
+            content: contentString2,
+            maxWidth: 200
+        });
+        var TESTPUBB2 = new google.maps.Marker({
+            map: map,
+            animation: google.maps.Animation.DROP,
+            position: {lat: 45.806981, lng: 10.106357},
+            title:"MERCATO DI PISOGNE",
+            icon: icontestpub,
+        });
+        TESTPUBB2.addListener('click', function() {
+            infowindow2.open(map, TESTPUBB2);
+        });
+
+
+        //COSTA VOLPINO
+        var contentString3 = '<div>'+
+            '<h3>MERCATO DI COSTA VOLPINO</h3>'+
+            '<p><b>Mercoledì Mattina Ore 09:00</b></p>'+
+            '</div>';
+        var infowindow3 = new google.maps.InfoWindow({
+            content: contentString3,
+            maxWidth: 200
+        });
+        var TESTPUBB3 = new google.maps.Marker({
+            map: map,
+            animation: google.maps.Animation.DROP,
+            position: {lat: 45.825376, lng: 10.096056},
+            title:"MERCATO DI COSTA VOLPINO",
+            icon: icontestpub,
+        });
+        TESTPUBB3.addListener('click', function() {
+            infowindow3.open(map, TESTPUBB3);
+        });
+        // FINE MARKER SALA DEL REGNO E POSIZIONI TESTIMONIANZA PUBBLICA
+
+        //FILE CONFINI TERRITORIO CONGREGAZIONE
+        var geoxmlcomuni = new geoXML3.parser({map: map, zIndex: 20});
+        geoxmlcomuni.parse('CONFINI.kml');
+
+        //FILE CONFINI COMUNI
+        var geoxmlcomuni = new geoXML3.parser({map: map, zIndex: 10});
+        geoxmlcomuni.parse('COMUNI.kml');
+
+        // FILE TERRITORI CON geoxml3
+        geoxmlt = new geoXML3.parser({
+            map: map,
+            zoom: true,
+            singleInfoWindow: true,
+            markerOptions: {optimized: false},
+            afterParse: useTheData,
+            failedParse: geoxmlErrorHandler
+        });
+        geoxmlt.parse('territori.kml');
+        // continua rigenerazione della barra laterale in base alla visualizzazione attuale
+        google.maps.event.addListener(map, "bounds_changed", makeSidebar);
+        google.maps.event.addListener(map, "center_changed", makeSidebar);
+        google.maps.event.addListener(map, "zoom_changed", makeSidebar);
+        google.maps.event.addListenerOnce(map, "idle", makeSidebar);
+
+
+        // Create a new StyledMapType object, passing it an array of styles,
+        // and the name to be displayed on the map type control.
+        var styledMapType2 = new google.maps.StyledMapType(
+            [
+                {elementType: 'geometry', stylers: [{color: '#ebe3cd'}]},
+                {elementType: 'labels.text.fill', stylers: [{color: '#523735'}]},
+                {elementType: 'labels.text.stroke', stylers: [{color: '#f5f1e6'}]},
+                {
+                    featureType: 'administrative',
+                    elementType: 'geometry.stroke',
+                    stylers: [{color: '#c9b2a6'}]
+                },
+                {
+                    featureType: 'administrative.land_parcel',
+                    elementType: 'geometry.stroke',
+                    stylers: [{color: '#dcd2be'}]
+                },
+                {
+                    featureType: 'administrative.land_parcel',
+                    elementType: 'labels.text.fill',
+                    stylers: [{color: '#ae9e90'}]
+                },
+                {
+                    featureType: 'landscape.natural',
+                    elementType: 'geometry',
+                    stylers: [{color: '#dfd2ae'}]
+                },
+                {
+                    featureType: 'poi',
+                    elementType: 'geometry',
+                    stylers: [{color: '#dfd2ae'}]
+                },
+                {
+                    featureType: 'poi',
+                    elementType: 'labels.text.fill',
+                    stylers: [{color: '#93817c'}]
+                },
+                {
+                    featureType: 'poi.park',
+                    elementType: 'geometry.fill',
+                    stylers: [{color: '#a5b076'}]
+                },
+                {
+                    featureType: 'poi.park',
+                    elementType: 'labels.text.fill',
+                    stylers: [{color: '#447530'}]
+                },
+                {
+                    featureType: 'road',
+                    elementType: 'geometry',
+                    stylers: [{color: '#f5f1e6'}]
+                },
+                {
+                    featureType: 'road.arterial',
+                    elementType: 'geometry',
+                    stylers: [{color: '#fdfcf8'}]
+                },
+                {
+                    featureType: 'road.highway',
+                    elementType: 'geometry',
+                    stylers: [{color: '#f8c967'}]
+                },
+                {
+                    featureType: 'road.highway',
+                    elementType: 'geometry.stroke',
+                    stylers: [{color: '#e9bc62'}]
+                },
+                {
+                    featureType: 'road.highway.controlled_access',
+                    elementType: 'geometry',
+                    stylers: [{color: '#e98d58'}]
+                },
+                {
+                    featureType: 'road.highway.controlled_access',
+                    elementType: 'geometry.stroke',
+                    stylers: [{color: '#db8555'}]
+                },
+                {
+                    featureType: 'road.local',
+                    elementType: 'labels.text.fill',
+                    stylers: [{color: '#806b63'}]
+                },
+                {
+                    featureType: 'transit.line',
+                    elementType: 'geometry',
+                    stylers: [{color: '#dfd2ae'}]
+                },
+                {
+                    featureType: 'transit.line',
+                    elementType: 'labels.text.fill',
+                    stylers: [{color: '#8f7d77'}]
+                },
+                {
+                    featureType: 'transit.line',
+                    elementType: 'labels.text.stroke',
+                    stylers: [{color: '#ebe3cd'}]
+                },
+                {
+                    featureType: 'transit.station',
+                    elementType: 'geometry',
+                    stylers: [{color: '#dfd2ae'}]
+                },
+                {
+                    featureType: 'water',
+                    elementType: 'geometry.fill',
+                    stylers: [{color: '#b9d3c2'}]
+                },
+                {
+                    featureType: 'water',
+                    elementType: 'labels.text.fill',
+                    stylers: [{color: '#92998d'}]
+                }
+            ],
+            {name: 'TERRITORI'});
+
+        //Associate the styled map with the MapTypeId and set it to display.
+        map.mapTypes.set('TERRITORI', styledMapType2);
+        map.setMapTypeId('TERRITORI');
+
+        //inizio parte geolocalizzazione con refresh e direzione
+        function enableWatchPosition() {
+            if (navigator.geolocation) {
+                watchPositionId = navigator.geolocation.watchPosition(locateByBrowser, error, {
+                    timeout : 30000,
+                    enableHighAccuracy : true,
+                    maximumAge : 1000
+                });
+            }
+        }
+
+        function error(err) {
+            console.warn('ERROR(' + err.code + '): ' + err.message);
+        }
+
+        function locateByBrowser(location) {
+            var currentLocation = new google.maps.LatLng(location.coords.latitude, location.coords.longitude);
+            myLocationMarker.setPosition(currentLocation);
+            if (centramypos == '1'){
+                map.setCenter(myLocationMarker.getPosition());
+            }
+        }
+
+        function addUserLocation() {
+            myLocationMarker = new google.maps.Marker({
+                clickable : false,
+                icon: {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    strokeColor : '#3333FF',
+                    strokeWeight : 5,
+                    scale: 2.5
+                },
+                shadow : null,
+                zIndex : 999,
+                title : "Posizione attuale",
+                map : map
+            });
+
+            enableWatchPosition();
+            enableOrientationArrow();
+        }
+
+        function enableOrientationArrow() {
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', function(event) {
+                    var alpha = null;
+                    //Check if property exist
+                    if (event.alpha) {
+                        alpha = event.alpha;
+                    }
+                    //if not exist (iOS)
+                    else {
+                        alpha = event.webkitCompassHeading;
+                    }
+                    var locationIcon = myLocationMarker.get('icon');
+                    locationIcon.rotation = 360 - alpha;
+                    myLocationMarker.set('icon', locationIcon);
+                }, false);
+            }
+        }
+
+        addUserLocation();
+        //fine parte geolocalizzazione con refresh e direzione
+
+        // inizio bottone di controllo che centra su propria posizione - DA SISTEMARE/RIFARE
+        function addCenterYourLocationButton(map, marker)
+        {
+            var controlDiv = document.createElement('div');
+
+            var firstChild = document.createElement('button');
+            firstChild.style.backgroundColor = '#fff';
+            firstChild.style.border = 'none';
+            firstChild.style.outline = 'none';
+            firstChild.style.width = '28px';
+            firstChild.style.height = '28px';
+            firstChild.style.borderRadius = '2px';
+            firstChild.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)';
+            firstChild.style.cursor = 'pointer';
+            firstChild.style.marginLeft = '10px';
+            firstChild.style.padding = '0px';
+            firstChild.title = 'Centra posizione';
+            controlDiv.appendChild(firstChild);
+
+            var secondChild = document.createElement('div');
+            secondChild.style.margin = '5px';
+            secondChild.style.width = '18px';
+            secondChild.style.height = '18px';
+            secondChild.style.backgroundImage = 'url(https://maps.gstatic.com/tactile/mylocation/mylocation-sprite-1x.png)';
+            secondChild.style.backgroundSize = '180px 18px';
+            secondChild.style.backgroundPosition = '0px 0px';
+            secondChild.style.backgroundRepeat = 'no-repeat';
+            secondChild.id = 'you_location_img';
+            firstChild.appendChild(secondChild);
+
+            firstChild.addEventListener('click', function() {
+                map.setCenter(marker.getPosition());
+            });
+
+            firstChild.addEventListener('dblclick', function() {
+                if(centramypos == '0' && navigator.geolocation) {
+                    centramypos='1';
+                    $('#you_location_img').css('background-position', '-144px 0px');
+                }else if(centramypos == '1'){
+                    centramypos='0';
+                    $('#you_location_img').css('background-position', '0px 0px');
+                }
+            });
+
+            controlDiv.index = 1;
+            map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(controlDiv);
+        }
+        addCenterYourLocationButton(map,myLocationMarker);
+        // fine bottone di controllo che centra su propria posizione
+
+    }//fine initmap
+
+    // Inizio funzioni operazioni sui territori post-geoxml parsing
+    function geoxmlErrorHandler(doc) {
+        alert("GEOXML3: failed parse");
+    }
+    // mostra solo il poligono selezionato
+    function kmlShowPlacemark(pm) {
+        if (geoXmlDoc.placemarks[pm].polygon) {
+            map.fitBounds(geoXmlDoc.placemarks[pm].polygon.bounds);
+        }
+        for (var i = 0; i < geoXmlDoc.placemarks.length; i++) {
+            var placemark = geoXmlDoc.placemarks[i];
+            if (i == pm) {
+                if (placemark.polygon) placemark.polygon.setMap(map);
+            } else {
+                if (placemark.polygon) placemark.polygon.setMap(null);
+            }
+        }
+    }
+    // clicca sul poligono
+    function kmlPgClick(pm) {
+        geoXmlDoc.placemarks[pm].polygon.setMap(map);
+        google.maps.event.trigger(geoXmlDoc.placemarks[pm].polygon,"click");
+    }
+    // mostra tutti i poligoni
+    function showAll(zomma) {
+        if (zomma == "1") {
+            map.fitBounds(geoXmlDoc.bounds);
+        }
+        for (var i = 0; i < geoXmlDoc.placemarks.length; i++) {
+            var placemark = geoXmlDoc.placemarks[i];
+            if (placemark.polygon) placemark.polygon.setMap(map);
+        }
+    }
+    var highlightOptions = { fillColor: "#FFFF00", strokeColor: "#000000", fillOpacity: 0.3, strokeWidth: 10 };
+    function kmlHighlightPoly(pm) {
+        for (var i=0;i<geoXmlDoc.placemarks.length;i++) {
+            var placemark = geoXmlDoc.placemarks[i];
+            if (i == pm) {
+                if (placemark.polygon) placemark.polygon.setOptions(highlightOptions);
+            } else {
+            if (placemark.polygon) placemark.polygon.setOptions(placemark.polygon.normalStyle);
+            }
+        }
+    }
+    function kmlUnHighlightPoly(pm) {
+        for (var i=0;i<geoXmlDoc.placemarks.length;i++) {
+            if (i == pm) {
+                var placemark = geoXmlDoc.placemarks[i];
+                if (placemark.polygon) placemark.polygon.setOptions(placemark.polygon.normalStyle);
+            }
+        }
+    }
+    function highlightPoly(poly, polynum) {
+        google.maps.event.addListener(poly, "mouseover", function() {
+            var rowElem = document.getElementById('row'+polynum);
+            if (rowElem) rowElem.style.backgroundColor = "#FFFA5E";
+            poly.setOptions(highlightOptions);
+        });
+        google.maps.event.addListener(poly, "mouseout", function() {
+            var rowElem = document.getElementById('row'+polynum);
+            if (rowElem) rowElem.style.backgroundColor = "#FFFFFF";
+            poly.setOptions(poly.normalStyle);
+        });
+        // mostra il singolo poligono al click e al successivo rimostra tutti
+        google.maps.event.addListener(poly, "rightclick", function() {
+            if (singolo == true) {
+                showAll("1");
+                singolo = false;
+            } else {
+                singolo = true;
+                kmlShowPlacemark(polynum);
+            }
+        });
+    }
+    // == rebuilds the sidebar to match the markers currently displayed ==
+    function makeSidebarPolygonEntry(i) {
+        var name = geoXmlDoc.placemarks[i].name;
+        if (!name  || (name.length == 0)) name = "polygon #"+i;
+        sidebarHtml += '<a id="row'+i+'" onclick="kmlPgClick('+i+');" ondblclick="kmlShowPlacemark('+i+');" href="#" class="list-group-item list-group-item-action" onmouseover="kmlHighlightPoly('+i+');" onmouseout="kmlUnHighlightPoly('+i+');">'+name+'</a>';
+    }
+
+    function makeSidebar() {
+        sidebarHtml = '<div class="list-group">';
+        var currentBounds = map.getBounds();
+        // if bounds not yet available, just use the empty bounds object;
+        if (!currentBounds) currentBounds=new google.maps.LatLngBounds();
+        if (geoXmlDoc && geoXmlDoc.placemarks) {
+            for (var i=0; i<geoXmlDoc.placemarks.length; i++) {
+                if (geoXmlDoc.placemarks[i].polygon) {
+                    if (currentBounds.intersects(geoXmlDoc.placemarks[i].polygon.bounds)) {
+                        makeSidebarPolygonEntry(i);
+                    }
+                }
+            }
+        }
+        sidebarHtml += "</div>";
+        document.getElementById("sidebar").innerHTML = sidebarHtml;
+    }
+
+    function useTheData(doc) {
+        var currentBounds = map.getBounds();
+        if (!currentBounds) currentBounds = new google.maps.LatLngBounds();
+        // Geodata handling goes here, using JSON properties of the doc object
+        sidebarHtml = '<div class="list-group">';
+        geoXmlDoc = doc[0];
+        if (!geoXmlDoc || !geoXmlDoc.placemarks) return;
+        for (var i = 0; i < geoXmlDoc.placemarks.length; i++) {
+            // console.log(doc[0].markers[i].title);
+            var placemark = geoXmlDoc.placemarks[i];
+            if (placemark.polygon) {
+                if (currentBounds.intersects(placemark.polygon.bounds)) {
+                    makeSidebarPolygonEntry(i);
+                }
+                var normalStyle = {
+                    strokeColor: placemark.polygon.get('strokeColor'),
+                    strokeWeight: placemark.polygon.get('strokeWeight'),
+                    strokeOpacity: placemark.polygon.get('strokeOpacity'),
+                    fillColor: placemark.polygon.get('fillColor'),
+                    fillOpacity: placemark.polygon.get('fillOpacity')
+                };
+                placemark.polygon.normalStyle = normalStyle;
+                highlightPoly(placemark.polygon, i);
+                // aggiunta opzione datalist ricerca territorio
+                $("#lnomiterritori").append($("<option>").attr('data-id', i).attr('value', placemark.name));
+            }
+        }
+        sidebarHtml += "</div>";
+        document.getElementById("sidebar").innerHTML = sidebarHtml;
+    }
+    // Fine funzioni operazioni sui territori post-geoxml parsing
+
+    // geocode (punta a indirizzo, aggiunge anche un marker)
+    function codeAddress() {
+        var address = document.getElementById('address').value;
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ 'address': address }, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                var marker = new google.maps.Marker({
+                    map: map,
+                    position: results[0].geometry.location
+                });
+                if (results[0].geometry.viewport)
+                    map.fitBounds(results[0].geometry.viewport);
+                else if (results[0].geometry.bounds)
+                    map.fitBounds(results[0].geometry.bounds);
+                else
+                    map.setCenter(results[0].geometry.location);
+            } else {
+                alert('Geocode was not successful for the following reason: ' + status);
+            }
+        });
+    }
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAIlsHUluoDx7kCAAS29CSy_YWhFbvinV4&callback=initMap">
+    </script>
+</body>
+</html>
